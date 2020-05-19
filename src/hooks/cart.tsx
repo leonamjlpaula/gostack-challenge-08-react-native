@@ -8,7 +8,7 @@ import React, {
 
 import AsyncStorage from '@react-native-community/async-storage';
 
-interface Product {
+export interface Product {
   id: string;
   title: string;
   image_url: string;
@@ -30,8 +30,7 @@ const CartProvider: React.FC = ({ children }) => {
 
   useEffect(() => {
     async function loadProducts(): Promise<void> {
-      // await AsyncStorage.clear();
-      const productsJSON = await AsyncStorage.getItem('products');
+      const productsJSON = await AsyncStorage.getItem('@GoMarket:products');
       if (productsJSON) {
         setProducts(JSON.parse(productsJSON));
       }
@@ -50,14 +49,23 @@ const CartProvider: React.FC = ({ children }) => {
         newProduct = products[findProductIndex];
         newProduct.quantity += 1;
         newProducts[findProductIndex] = newProduct;
+        // newProducts = products.map(prodItem => {
+        //   const prodMap = prodItem;
+        //   if (prodMap.id === product.id) {
+        //     prodMap.quantity += 1;
+        //   }
+
+        //   return prodMap;
+        // });
       } else {
         newProduct = { ...product, quantity: 1 };
         newProducts = [...products, newProduct];
       }
-      console.log(newProducts);
-      console.log(newProduct);
-      await AsyncStorage.setItem('products', JSON.stringify(newProducts));
       setProducts(newProducts);
+      await AsyncStorage.setItem(
+        '@GoMarket:products',
+        JSON.stringify(newProducts),
+      );
     },
     [products],
   );
@@ -71,7 +79,10 @@ const CartProvider: React.FC = ({ children }) => {
         const newProducts = [...products];
         newProducts[productIndex] = newProduct;
         setProducts(newProducts);
-        await AsyncStorage.setItem('products', JSON.stringify(newProducts));
+        await AsyncStorage.setItem(
+          '@GoMarket:products',
+          JSON.stringify(newProducts),
+        );
       }
     },
     [products],
@@ -79,15 +90,32 @@ const CartProvider: React.FC = ({ children }) => {
 
   const decrement = useCallback(
     async id => {
+      let newProducts = products;
+
+      const findedProduct = newProducts.find(
+        product => product.id === id,
+      ) as Product;
       const productIndex = products.findIndex(p => p.id === id);
-      if (productIndex >= 0 && products[productIndex].quantity > 1) {
+      if (findedProduct) {
         const newProduct = products[productIndex];
-        newProduct.quantity -= 1;
-        const newProducts = [...products];
-        newProducts[productIndex] = newProduct;
-        setProducts(newProducts);
-        await AsyncStorage.setItem('products', JSON.stringify(newProducts));
+        if (newProduct.quantity === 1) {
+          newProducts = newProducts.filter(product => product.id !== id);
+        } else {
+          newProducts = newProducts.map(product => {
+            const prodMap = product;
+            if (prodMap.id === id) {
+              prodMap.quantity -= 1;
+            }
+            return prodMap;
+          });
+        }
       }
+
+      setProducts(newProducts);
+      await AsyncStorage.setItem(
+        '@GoMarket:products',
+        JSON.stringify(newProducts),
+      );
     },
     [products],
   );
